@@ -1,7 +1,7 @@
 #pragma once
 typedef  unsigned char BYTE;
 
-struct Region
+typedef struct Region
 {
 	int PointNum;
 	int left;
@@ -16,17 +16,17 @@ struct Region
 	int RightTop;
 
 	bool IsOK;
-};
+}Region;
 
-struct CPoint
+typedef struct CPoint
 {
 	int x;
 	int y;
-};
+}CPoint;
 
-struct RectCenter{
+typedef struct RectCenter{
 	double x;
 	double y;
-};
+}RectCenter;
 
 int KeyGrow(unsigned char * p, int w, int h,int * typeImg);

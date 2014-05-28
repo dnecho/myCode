@@ -2,12 +2,12 @@
 #define REALDIS 0.33
 typedef unsigned long DWORD;
 
-struct BaseCoordinate
+typedef struct BaseCoordinate
 {
 	int pt1;
 	int pt2;
 	bool direction;
-};
+}BaseCoordinate;
 
 
 typedef struct Axis {

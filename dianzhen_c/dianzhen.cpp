@@ -148,41 +148,20 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 				continue;
 			int a0_Region = PointInRegion(center, N, a[0], distance);
 			int b0_Region = PointInRegion(center, N, b[0], distance);
-			//char txt[255];
-			//extern Region region[1000];
+
 			if(a0_Region==-1 && b0_Region>=0 )
 			{
-				//for(int pt_i = 0; pt_i < des5_1Num; pt_i++)
-				//{
-				//	sprintf_s(txt, "%d", pt_i);
-
-				//	cvRectangle(g_pImg, cvPoint(region[pt5Idx[pt_i]].left, region[pt5Idx[pt_i]].top), cvPoint(region[pt5Idx[pt_i]].right, region[pt5Idx[pt_i]].bottom), cvScalar(255,0,0));
-				//	//cout<<pt5Idx[pt_i]<<"\t";
-				//}
-				//cout<<"BaseCoordinateNum:"<<BaseCoordinateNum<<"\tendpt1:"<<endpt1_idx<<"\t"<<"endpt2:"<<endpt2_idx<<endl;
 				baseCoordinate[BaseCoordinateNum].pt1 = endpt1_idx;
 				baseCoordinate[BaseCoordinateNum].pt2 = endpt2_idx;
 				baseCoordinate[BaseCoordinateNum].direction = true;
 				BaseCoordinateNum++;
-				//direction = true;
-				//return true;
 			}
 			else if(a0_Region>0 && b0_Region==-1 )
 			{
-				//for(int pt_i = 0; pt_i < des5_1Num; pt_i++)
-				//{
-				//	sprintf_s(txt, "%d", pt_i);
-
-				//	cvRectangle(g_pImg, cvPoint(region[pt5Idx[pt_i]].left, region[pt5Idx[pt_i]].top), cvPoint(region[pt5Idx[pt_i]].right, region[pt5Idx[pt_i]].bottom), cvScalar(255,0,0));
-				//	//cout<<pt5Idx[pt_i]<<"\t";					
-				//}
-				//cout<<"BaseCoordinateNum:"<<BaseCoordinateNum<<"\tendpt1:"<<endpt1_idx<<"\t"<<"endpt2:"<<endpt2_idx<<endl;
 				baseCoordinate[BaseCoordinateNum].pt1 = endpt1_idx;
 				baseCoordinate[BaseCoordinateNum].pt2 = endpt2_idx;
 				baseCoordinate[BaseCoordinateNum].direction = false;
 				BaseCoordinateNum++;
-				//direction = false;
-				//return true;
 			}				
 		}
 	}
@@ -199,7 +178,6 @@ double DotProduct(CPoint a, CPoint b)
 
 bool GetXyCoordinate(int endPt1, int endPt2, CPoint* PointCenter, int N, double distance, bool direction, CPoint PicCenter, double* tempX, double* tempY, double* PSize)
 {
-	//cout<<"1:"<<endPt1<<"\t2:"<<endPt2<<endl;
 	CPoint BasePt = PointCenter[endPt1];
 	double delta_x = (PointCenter[endPt2].x - PointCenter[endPt1].x)/4.0;
 	double delta_y = (PointCenter[endPt2].y - PointCenter[endPt1].y)/4.0;
@@ -374,21 +352,26 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 		if(success)
 		{
 			//求平均提高精度
-			printf("x:%f，y:%f\n", tempX, tempY);
+			printf("x:%f，y:%f，PixelSize:%f\n", tempX, tempY, tempPsize);
 			CenterX += tempX;
 			CenterY += tempY;
 			Psize += tempPsize;
 			SuccessUnitNum++;
-			//if(SuccessUnitNum==5)
-			//	break;
 			
 			//测试时如果精度够，可以提高跳出以提高检测速度
-			//break;
+			//if(SuccessUnitNum==5)
+			//	break;
 		}		
 	}
 	if(SuccessUnitNum==0)//没有检测出一个可用的单元
+	{
+		free(PointCenter);
+		free(baseCoordinate);
+		free(pDataGaussian);
+		free(pData);
+		free(typeImg);
 		return 0;
-	
+	}
 	
 	center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
 	center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
@@ -400,8 +383,6 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	free(pDataGaussian);
 	free(pData);
 	free(typeImg);
-	//cvNamedWindow("Src", 0);
-	//cvShowImage("Src", pThresholdImg);
 	return 1;
 }
 
@@ -478,11 +459,19 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 {
 	int i,j,sum,index,m,n;
 	int pos;
-	int templates[25] = { 1, 4, 7, 4, 1, 
-						  4, 16, 26, 16, 4, 
-						  7, 26, 41, 26, 7,
-						  4, 16, 26, 16, 4, 
-						  1, 4, 7, 4, 1 };		
+	//int templates[25] = { 1, 4, 7, 4, 1, 
+	//					  4, 16, 26, 16, 4, 
+	//					  7, 26, 41, 26, 7,
+	//					  4, 16, 26, 16, 4, 
+	//					  1, 4, 7, 4, 1 };//273
+
+	int templates[49] = { 1, 4, 7, 10, 7, 4, 1,//34
+						  4, 12, 26, 33, 26, 12, 4,//117
+						  7, 26, 55, 71, 55, 26, 7,//247
+						  10, 33, 71, 91, 71, 33, 10,//319
+						  7, 26, 55, 71, 55, 26, 7,//247
+						  4, 12, 26, 33, 26, 12, 4,//117
+						  1, 4, 7, 10, 7, 4, 1};//34;1115
 	
 	memcpy ( smooth, corrupted, width*height*sizeof(unsigned char) );
 	for (j=0;j<height;j++)
@@ -491,9 +480,9 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 		{
 			sum = 0;
 			index = 0;
-			for ( m=j-2; m<j+3; m++)
+			for ( m=j-3; m<j+4; m++)
 			{
-				for (n=i-2; n<i+3; n++)
+				for (n=i-3; n<i+4; n++)
 				{
 					pos = m*width + n;
 					if(pos<0)
@@ -503,7 +492,7 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 					sum += corrupted[pos] * templates[index++];
 				}
 			}
-			sum /= 273;
+			sum /= 1115;
 			if (sum > 255)
 				sum = 255;
 			smooth [ j*width+i ] = sum;

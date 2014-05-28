@@ -24,13 +24,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	unsigned char* pImgData = (unsigned char*)malloc(sizeof(unsigned char)*(pSrc->width*pSrc->height));
 	for(int i = 0; i < pSrc->height; i++)
 		for(int j = 0; j < pSrc->width; j++)
-			pImgData[j+i*pSrc->width] = pSrcData[j+i*pSrc->widthStep];
-	//unsigned char* pData = (unsigned char*)malloc(sizeof(unsigned char)*(pSrc->width*pSrc->height));
-	//for(int i = 0; i < pSrc->height; i++)
-	//	for(int j = 0; j < pSrc->width; j++)
-	//		pData[j+i*pSrc->width] = pSrcData[j+i*pSrc->widthStep];
-
-	//MyGaussian(pImgData, pSrc->width, pSrc->height, pData, 6);			
+			pImgData[j+i*pSrc->width] = pSrcData[j+i*pSrc->widthStep];			
 			
 	process(pImgData, pSrc->width, pSrc->height, &center, &pixelsize);
 
