@@ -1,9 +1,9 @@
-// dianzhenMFCDlg.cpp : 实现文件
+// dianzhen_CMFCDlg.cpp : 实现文件
 //
 
 #include "stdafx.h"
-#include "dianzhenMFC.h"
-#include "dianzhenMFCDlg.h"
+#include "dianzhen_CMFC.h"
+#include "dianzhen_CMFCDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -41,35 +41,35 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 END_MESSAGE_MAP()
 
 
-// CdianzhenMFCDlg 对话框
+// Cdianzhen_CMFCDlg 对话框
 
 
 
 
-CdianzhenMFCDlg::CdianzhenMFCDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CdianzhenMFCDlg::IDD, pParent)
+Cdianzhen_CMFCDlg::Cdianzhen_CMFCDlg(CWnd* pParent /*=NULL*/)
+	: CDialog(Cdianzhen_CMFCDlg::IDD, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-void CdianzhenMFCDlg::DoDataExchange(CDataExchange* pDX)
+void Cdianzhen_CMFCDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 }
 
-BEGIN_MESSAGE_MAP(CdianzhenMFCDlg, CDialog)
+BEGIN_MESSAGE_MAP(Cdianzhen_CMFCDlg, CDialog)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
-	ON_BN_CLICKED(IDC_BUTTON1, &CdianzhenMFCDlg::OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_BUTTON2, &CdianzhenMFCDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON1, &Cdianzhen_CMFCDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_BUTTON2, &Cdianzhen_CMFCDlg::OnBnClickedButton2)
 END_MESSAGE_MAP()
 
 
-// CdianzhenMFCDlg 消息处理程序
+// Cdianzhen_CMFCDlg 消息处理程序
 
-BOOL CdianzhenMFCDlg::OnInitDialog()
+BOOL Cdianzhen_CMFCDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 
@@ -98,11 +98,10 @@ BOOL CdianzhenMFCDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	pSrc = NULL;
-	pSrc3C = NULL;
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
-void CdianzhenMFCDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void Cdianzhen_CMFCDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -119,7 +118,7 @@ void CdianzhenMFCDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-void CdianzhenMFCDlg::OnPaint()
+void Cdianzhen_CMFCDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -146,14 +145,16 @@ void CdianzhenMFCDlg::OnPaint()
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
 //显示。
-HCURSOR CdianzhenMFCDlg::OnQueryDragIcon()
+HCURSOR Cdianzhen_CMFCDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
 
-void CdianzhenMFCDlg::OnBnClickedButton1()
+void Cdianzhen_CMFCDlg::OnBnClickedButton1()
 {
+	
+	// TODO: 在此添加控件通知处理程序代码
 	// TODO: 在此添加控件通知处理程序代码
 	CFileDialog dlg(TRUE,//TRUE是创建打开文件对话框，FALSE则创建的是保存文件对话框 
 		".jpg",//默认的打开文件的类型 
@@ -168,11 +169,11 @@ void CdianzhenMFCDlg::OnBnClickedButton1()
 		if (!pSrc)
 		{
 			cvReleaseImage(&pSrc);
+			pSrc=NULL;
 		}
 
 		pSrc = cvLoadImage(FileName.GetBuffer(0),0);
-		pSrc3C = cvLoadImage(FileName.GetBuffer(0),1);
-
+		PicName=FileName;
 		//int dwidth=500;
 		//int dheight=dwidth*pSrc->height/pSrc->width;
 
@@ -187,26 +188,40 @@ void CdianzhenMFCDlg::OnBnClickedButton1()
 	}
 }
 
-void CdianzhenMFCDlg::OnBnClickedButton2()
+void Cdianzhen_CMFCDlg::OnBnClickedButton2()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if(pSrc==NULL||pSrc3C==NULL)
+	Outcome="";
+	if(pSrc == NULL)
 	{
-		AfxMessageBox("请打开图片");
+		AfxMessageBox("请先打开图片");
 		return;
 	}
-	
-	long t1=GetTickCount();
-	
-	Detect(pSrc, pSrc3C);
-	long t2=GetTickCount();
+	Axis center={0};
+	int pixelsize=0;
 
-	CString ProjectTime;
-	ProjectTime.Format("%d", t2-t1);
-	AfxMessageBox(ProjectTime);
-		
-	cvNamedWindow("识别结果", 0);
-	cvShowImage("识别结果", pSrc3C);
-	cvWaitKey();
+	unsigned char* pSrcData = (unsigned char*)pSrc->imageData;
 
+	//cvSmooth(pSrc, pSrc, CV_GAUSSIAN, 3);
+
+	unsigned char* pImgData = (unsigned char*)malloc(sizeof(unsigned char)*(pSrc->width*pSrc->height));
+	for(int i = 0; i < pSrc->height; i++)
+		for(int j = 0; j < pSrc->width; j++)
+			pImgData[j+i*pSrc->width] = pSrcData[j+i*pSrc->widthStep];			
+
+	int IsSuccess = process(pImgData, pSrc->width, pSrc->height, &center, &pixelsize, Outcome);
+	
+	if(IsSuccess==0)
+	{
+		CString tmp;
+		tmp.Format("处理失败，请记录该图片，图片名字为：%s",PicName);
+		Outcome += tmp;
+		AfxMessageBox(Outcome);
+	}else
+	{
+		CString tmp;
+		tmp.Format("求平均值final\tx:%d，y:%d，PixelSize:%d\n", center.x, center.y, pixelsize);
+		Outcome += tmp;
+		AfxMessageBox(Outcome);
+	}
 }

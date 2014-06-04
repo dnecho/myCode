@@ -1,24 +1,26 @@
-// dianzhenMFCDlg.h : 头文件
+// dianzhen_CMFCDlg.h : 头文件
 //
 
 #pragma once
 
 
-// CdianzhenMFCDlg 对话框
-class CdianzhenMFCDlg : public CDialog
+// Cdianzhen_CMFCDlg 对话框
+class Cdianzhen_CMFCDlg : public CDialog
 {
 // 构造
 public:
-	CdianzhenMFCDlg(CWnd* pParent = NULL);	// 标准构造函数
+	Cdianzhen_CMFCDlg(CWnd* pParent = NULL);	// 标准构造函数
 
 // 对话框数据
-	enum { IDD = IDD_DIANZHENMFC_DIALOG };
+	enum { IDD = IDD_DIANZHEN_CMFC_DIALOG };
 
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
-	
+
 	IplImage* pSrc;
-	IplImage* pSrc3C;
+	CString PicName;
+	CString Outcome;
+
 // 实现
 protected:
 	HICON m_hIcon;

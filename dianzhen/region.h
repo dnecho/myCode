@@ -1,4 +1,5 @@
 #pragma once
+typedef  unsigned char BYTE;
 
 struct Region
 {
@@ -23,9 +24,9 @@ struct Region
 //	int y;
 //};
 
-struct RectCenter{
+typedef struct RectCenter{
 	double x;
 	double y;
-};
+}RectCenter;
 
 int KeyGrow(unsigned char * p, int w, int h,int * typeImg);

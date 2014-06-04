@@ -35,8 +35,9 @@
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
 
-
 #include "opencv2/opencv.hpp"
+#include "dianzhen.h"
+#include "region.h"
 using namespace std;
 using namespace cv;
 #pragma comment(lib,"cvLib/opencv_video231.lib")
@@ -53,14 +54,6 @@ using namespace cv;
 
 #pragma comment(lib,"cvLib/opencv_ml231.lib")
 #pragma comment(lib,"cvLib/opencv_ml231d.lib")
-
-#include <fstream>
-#include <time.h>
-
-#include "ErZhi.h"
-#include "region.h"
-#include "dianzhen.h"
-typedef  unsigned char BYTE;
 
 
 

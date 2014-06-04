@@ -1,4 +1,4 @@
-// dianzhenMFC.h : PROJECT_NAME 应用程序的主头文件
+// dianzhen_CMFC.h : PROJECT_NAME 应用程序的主头文件
 //
 
 #pragma once
@@ -10,14 +10,14 @@
 #include "resource.h"		// 主符号
 
 
-// CdianzhenMFCApp:
-// 有关此类的实现，请参阅 dianzhenMFC.cpp
+// Cdianzhen_CMFCApp:
+// 有关此类的实现，请参阅 dianzhen_CMFC.cpp
 //
 
-class CdianzhenMFCApp : public CWinApp
+class Cdianzhen_CMFCApp : public CWinApp
 {
 public:
-	CdianzhenMFCApp();
+	Cdianzhen_CMFCApp();
 
 // 重写
 	public:
@@ -28,4 +28,4 @@ public:
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CdianzhenMFCApp theApp;
+extern Cdianzhen_CMFCApp theApp;

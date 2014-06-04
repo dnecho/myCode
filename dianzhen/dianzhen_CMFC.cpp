@@ -1,39 +1,39 @@
-// dianzhenMFC.cpp : 定义应用程序的类行为。
+// dianzhen_CMFC.cpp : 定义应用程序的类行为。
 //
 
 #include "stdafx.h"
-#include "dianzhenMFC.h"
-#include "dianzhenMFCDlg.h"
+#include "dianzhen_CMFC.h"
+#include "dianzhen_CMFCDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-// CdianzhenMFCApp
+// Cdianzhen_CMFCApp
 
-BEGIN_MESSAGE_MAP(CdianzhenMFCApp, CWinApp)
+BEGIN_MESSAGE_MAP(Cdianzhen_CMFCApp, CWinApp)
 	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
 END_MESSAGE_MAP()
 
 
-// CdianzhenMFCApp 构造
+// Cdianzhen_CMFCApp 构造
 
-CdianzhenMFCApp::CdianzhenMFCApp()
+Cdianzhen_CMFCApp::Cdianzhen_CMFCApp()
 {
 	// TODO: 在此处添加构造代码，
 	// 将所有重要的初始化放置在 InitInstance 中
 }
 
 
-// 唯一的一个 CdianzhenMFCApp 对象
+// 唯一的一个 Cdianzhen_CMFCApp 对象
 
-CdianzhenMFCApp theApp;
+Cdianzhen_CMFCApp theApp;
 
 
-// CdianzhenMFCApp 初始化
+// Cdianzhen_CMFCApp 初始化
 
-BOOL CdianzhenMFCApp::InitInstance()
+BOOL Cdianzhen_CMFCApp::InitInstance()
 {
 	// 如果一个运行在 Windows XP 上的应用程序清单指定要
 	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
@@ -58,7 +58,7 @@ BOOL CdianzhenMFCApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CdianzhenMFCDlg dlg;
+	Cdianzhen_CMFCDlg dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)

@@ -1,10 +1,12 @@
 #include "stdafx.h"
-
+#include "region.h"
+#include <memory.h>
+#include <malloc.h>
 Region region[1000];
 
 int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 {
-	if(p==NULL)
+	if(p==0)
 	{
 		return 0;
 	}
@@ -13,7 +15,7 @@ int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 	int LineSize=(w+3)/4*4;
 	BYTE DealPixel=0;
 
-	int * imgcopy=new int[LineSize*h];
+	int * imgcopy=(int*)malloc(sizeof(int)*LineSize*h);
 	memset(imgcopy,0,sizeof(int)*LineSize*h);
 
 	const int MaxPointNum=20000;
@@ -242,7 +244,7 @@ int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 		}
 	}
 
-	delete []imgcopy;
+	free(imgcopy);
 
 	return ++N;
 }

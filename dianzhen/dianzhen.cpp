@@ -1,14 +1,21 @@
 #include "stdafx.h"
+#include "dianzhen.h"
+#include "region.h"
+#include <math.h>
+#include <stdio.h>
+#include <malloc.h>
+#include <memory.h>
+
 int g_ImgX = 0;
 int g_ImgY = 0;
-inline bool IsPointInImg(CPoint pt)
+ bool IsPointInImg(CPoint pt)
 {
 	if(pt.x>=0 && pt.y>=0 && pt.x<g_ImgX && pt.y<g_ImgY)
 		return true;
 	return false;
 }
 
-inline double Get2PointDis(CPoint a, CPoint b)
+ double Get2PointDis(CPoint a, CPoint b)
 {
 	return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y);
 }
@@ -142,41 +149,20 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 				continue;
 			int a0_Region = PointInRegion(center, N, a[0], distance);
 			int b0_Region = PointInRegion(center, N, b[0], distance);
-			//char txt[255];
-			//extern Region region[1000];
+
 			if(a0_Region==-1 && b0_Region>=0 )
 			{
-				//for(int pt_i = 0; pt_i < des5_1Num; pt_i++)
-				//{
-				//	sprintf_s(txt, "%d", pt_i);
-
-				//	cvRectangle(g_pImg, cvPoint(region[pt5Idx[pt_i]].left, region[pt5Idx[pt_i]].top), cvPoint(region[pt5Idx[pt_i]].right, region[pt5Idx[pt_i]].bottom), cvScalar(255,0,0));
-				//	//cout<<pt5Idx[pt_i]<<"\t";
-				//}
-				//cout<<"BaseCoordinateNum:"<<BaseCoordinateNum<<"\tendpt1:"<<endpt1_idx<<"\t"<<"endpt2:"<<endpt2_idx<<endl;
 				baseCoordinate[BaseCoordinateNum].pt1 = endpt1_idx;
 				baseCoordinate[BaseCoordinateNum].pt2 = endpt2_idx;
 				baseCoordinate[BaseCoordinateNum].direction = true;
 				BaseCoordinateNum++;
-				//direction = true;
-				//return true;
 			}
 			else if(a0_Region>0 && b0_Region==-1 )
 			{
-				//for(int pt_i = 0; pt_i < des5_1Num; pt_i++)
-				//{
-				//	sprintf_s(txt, "%d", pt_i);
-
-				//	cvRectangle(g_pImg, cvPoint(region[pt5Idx[pt_i]].left, region[pt5Idx[pt_i]].top), cvPoint(region[pt5Idx[pt_i]].right, region[pt5Idx[pt_i]].bottom), cvScalar(255,0,0));
-				//	//cout<<pt5Idx[pt_i]<<"\t";					
-				//}
-				//cout<<"BaseCoordinateNum:"<<BaseCoordinateNum<<"\tendpt1:"<<endpt1_idx<<"\t"<<"endpt2:"<<endpt2_idx<<endl;
 				baseCoordinate[BaseCoordinateNum].pt1 = endpt1_idx;
 				baseCoordinate[BaseCoordinateNum].pt2 = endpt2_idx;
 				baseCoordinate[BaseCoordinateNum].direction = false;
 				BaseCoordinateNum++;
-				//direction = false;
-				//return true;
 			}				
 		}
 	}
@@ -184,12 +170,18 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 	return BaseCoordinateNum;
 }
 
-bool GetXyCoordinate(IplImage* pOutImg, int endPt1, int endPt2, CPoint* center, int N, double distance, bool direction)
+//求向量的内积
+double DotProduct(CPoint a, CPoint b)
 {
-	cout<<"1:"<<endPt1<<"\t2:"<<endPt2<<endl;
-	CPoint BasePt = center[endPt1];
-	double delta_x = (center[endPt2].x - center[endPt1].x)/4.0;
-	double delta_y = (center[endPt2].y - center[endPt1].y)/4.0;
+	return a.x*b.x + a.y*b.y;
+}
+
+
+bool GetXyCoordinate(int endPt1, int endPt2, CPoint* PointCenter, int N, double distance, bool direction, CPoint PicCenter, double* tempX, double* tempY, double* PSize)
+{
+	CPoint BasePt = PointCenter[endPt1];
+	double delta_x = (PointCenter[endPt2].x - PointCenter[endPt1].x)/4.0;
+	double delta_y = (PointCenter[endPt2].y - PointCenter[endPt1].y)/4.0;
 
 	const int xynum = 10;
 	CPoint xPt[xynum],yPt[xynum];
@@ -204,25 +196,17 @@ bool GetXyCoordinate(IplImage* pOutImg, int endPt1, int endPt2, CPoint* center, 
 		yPt[i].x = (int)(BasePt.x - y_ratio*delta_y + (i%5)*delta_x);
 		yPt[i].y = (int)(BasePt.y + y_ratio*delta_x + (i%5)*delta_y);
 
-		//sprintf_s(txt, "%d", i);
-		//cvPutText(pSrc3C, txt, cvPoint(xPt[i].x, xPt[i].y), &font,cvScalar(0,255,255));
-		//sprintf_s(txt, "%d", i);
-		//cvPutText(pSrc3C, txt, cvPoint(yPt[i].x, yPt[i].y), &font,cvScalar(0,255,255));
 	}
 
 	//如果四个端点不在图像中，则跳出
 	if(!IsPointInImg(xPt[0]) || !IsPointInImg(xPt[4]) || !IsPointInImg(yPt[5]) || !IsPointInImg(yPt[9]))
 		return false;
 
-	cvLine(pOutImg, cvPoint(xPt[0].x,xPt[0].y), cvPoint(xPt[4].x,xPt[4].y), cvScalar(0,255,0));
-	cvLine(pOutImg, cvPoint(yPt[9].x,yPt[9].y), cvPoint(xPt[4].x,xPt[4].y), cvScalar(0,255,0));
-	cvLine(pOutImg, cvPoint(yPt[9].x,yPt[9].y), cvPoint(yPt[5].x,yPt[5].y), cvScalar(0,255,0));
-	cvLine(pOutImg, cvPoint(xPt[0].x,xPt[0].y), cvPoint(yPt[5].x,yPt[5].y), cvScalar(0,255,0));
 	int xOutAarry[xynum],yOutAarry[xynum];
 	for(int i = 0; i < xynum; i++)
 	{
-		xOutAarry[i] = PointInRegion(center, N, xPt[i], distance)>=0?1:0;
-		yOutAarry[i] = PointInRegion(center, N, yPt[i], distance)>=0?1:0;
+		xOutAarry[i] = PointInRegion(PointCenter, N, xPt[i], distance)>=0?1:0;
+		yOutAarry[i] = PointInRegion(PointCenter, N, yPt[i], distance)>=0?1:0;
 	}
 
 	if(!direction)//如果方向不对，必须调换方向
@@ -244,45 +228,83 @@ bool GetXyCoordinate(IplImage* pOutImg, int endPt1, int endPt2, CPoint* center, 
 		xOut = (xOut<<1) | xOutAarry[i];
 		yOut = (yOut<<1) | yOutAarry[i];
 	}
+	printf("坐标x:%d,y:%d\t\t",xOut, yOut );
 
-	CvFont font; 
-	cvInitFont(&font,CV_FONT_HERSHEY_PLAIN ,1,1,0,1);
+	//计算原始坐标系x，y坐标轴方向
+	CPoint StartPt,EndPt;
+	
+	StartPt.x = direction?xPt[7].x:yPt[2].x;
+	StartPt.y = direction?xPt[7].y:yPt[2].y;
+	EndPt.x = direction?xPt[9].x:yPt[0].x;
+	EndPt.y = direction?xPt[9].y:yPt[0].y;
 
-	CvPoint xPos,yPos;
+	CPoint V_X;//={(), (EndPt.y-StartPt.y)};//原始x坐标向量
+	V_X.x=EndPt.x-StartPt.x;
+	V_X.y=EndPt.y-StartPt.y;
+	
+	StartPt.x = direction?xPt[7].x:yPt[2].x;
+	StartPt.y = direction?xPt[7].y:yPt[2].y;
+	EndPt.x = direction?yPt[2].x:xPt[7].x;
+	EndPt.y = direction?yPt[2].y:xPt[7].y;
 
-	xPos.x = direction?xPt[7].x:yPt[2].x;
-	xPos.y = direction?xPt[7].y:yPt[2].y;
-	yPos.x = direction?yPt[2].x:xPt[7].x;
-	yPos.y = direction?yPt[2].y:xPt[7].y;
+		
+	CPoint V_Y;//={(EndPt.x-StartPt.x), (EndPt.y-StartPt.y)};//原始y坐标向量
+	V_Y.x=EndPt.x-StartPt.x;
+	V_Y.y=EndPt.y-StartPt.y;
+	
+	double xyDotP = DotProduct(V_X, V_Y);//求xy坐标向量的内积，因为x,y坐标垂直，期望值应该为0，大多数能符合说明方向是正确的
+	
+	//求xy坐标向量的模
+	double V_Xmode = sqrt(1.0*(V_X.x*V_X.x + V_X.y*V_X.y));
+	double V_Ymode = sqrt(1.0*(V_Y.x*V_Y.x + V_Y.y*V_Y.y));
+		
 
-	drawArrow(pOutImg, xPos, yPos, 5, 30, cvScalar(0,255,0));
+	//检测单元的中心点
+	CPoint UnitCenter;
+	UnitCenter.x = (xPt[7].x + yPt[2].x)/2;
+	UnitCenter.y = (xPt[7].y + yPt[2].y)/2;
+	
 
-	char txt[255];
-	sprintf_s(txt, "%s%d", "x:", xOut);
-	cvPutText(pOutImg, txt, xPos, &font,cvScalar(0,0,255));
-	sprintf_s(txt, "%s%d", "y:", yOut);
-	cvPutText(pOutImg, txt, yPos, &font,cvScalar(0,0,255));
+	CPoint V_U2P;//检测单元的中心点与图片中心组成的向量，由检测单元的中心指向图片中心
+	V_U2P.x = PicCenter.x - UnitCenter.x;
+	V_U2P.y = PicCenter.y - UnitCenter.y;
+	
 
+	
+	//计算向量V_U2P在x，y方向的投影
+	double x_shadow = DotProduct(V_X, V_U2P)/V_Xmode;
+	double y_shadow = DotProduct(V_Y, V_U2P)/V_Ymode;
+	
+	double PixelsDis_2Point = sqrt(delta_x*delta_x + delta_y*delta_y);
+	(*PSize) = REALDIS/PixelsDis_2Point ;//像素代表的实际距离
+	
+	(*tempX) = (*PSize) * x_shadow + xOut*1.98;//x方向的偏移量
+	(*tempY) = (*PSize) * y_shadow + yOut*1.98;//y方向的偏移量
+	
 	return true;
 }
 
-void Detect(IplImage* pSrc, IplImage* pSrc3C)
+int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *pixelsize, CString& Outcome)
 {
-	int width = pSrc->width;
-	int height = pSrc->height;
+
 	g_ImgX = width;
 	g_ImgY = height;
 
 	//1.高斯滤波
-	cvSmooth(pSrc, pSrc, CV_GAUSSIAN, 7);
+	unsigned char* pDataGaussian = (unsigned char*)malloc(sizeof(unsigned char)*(width*height));
+
+	memcpy(pDataGaussian, yuy2buf, sizeof(unsigned char)*(width*height));
+
+	gaussianFilter(yuy2buf, pDataGaussian, width, height);
+
 
 	//2.二值化
-	IplImage* pThresholdImg = cvCloneImage(pSrc);
-	adaptiveThreshold(pSrc, pThresholdImg);
-	unsigned char* pData = (unsigned char*)pThresholdImg->imageData;
+	unsigned char* pData = (unsigned char*)malloc(sizeof(BYTE)*width*height);
+	adaptiveThreshold_C(pDataGaussian, width, height, width, pData);
+	
 
 	//3.寻找连通区域
-	int * typeImg=new int[height*width];
+	int * typeImg=(int*)malloc(sizeof(int)*height*width);
 	for(int i=0;i<height;i++)
 	{
 		for(int j=0;j<width;j++)
@@ -292,32 +314,15 @@ void Detect(IplImage* pSrc, IplImage* pSrc3C)
 	}
 	int N=KeyGrow(pData,width,height,typeImg);
 
-	CvFont font; 
-
-	cvInitFont(&font,CV_FONT_HERSHEY_PLAIN ,0.5,0.5,0,1);  
-
-
 	extern Region region[1000];
 	char txt[255]="";
-	//for(int i=0;i<N;i++)
-	//{
-	//	if (region[i].IsOK)
-	//	{	
-	//		sprintf_s(txt, "%d", i);
-	//		
-	//		cvRectangle(pSrc3C, cvPoint(region[i].left, region[i].top), cvPoint(region[i].right, region[i].bottom), cvScalar(255,0,0));
-	//		//cvPutText(pSrc3C, txt, cvPoint(region[i].left, region[i].top), &font,cvScalar(0,255,255));  
-	//	}
-	//}
-	//cvNamedWindow("pSrc3C", 0);
-	//cvShowImage("pSrc3C", pSrc3C);
-	//cvWaitKey();
+
 	//4.通过找最小的两点距离确定栅格距离distance	
-	CPoint* center = new CPoint[N];//求连通域的最小外接矩阵的中心
+	CPoint* PointCenter = (CPoint*)malloc(sizeof(CPoint)*N);//求连通域的最小外接矩阵的中心
 	for(int i = 0; i < N; i++)
 	{
-		center[i].x = (region[i].left+region[i].right)>>1;
-		center[i].y = (region[i].top+region[i].bottom)>>1;
+		PointCenter[i].x = (region[i].left+region[i].right)>>1;
+		PointCenter[i].y = (region[i].top+region[i].bottom)>>1;
 	}
 
 	double distance = 0xFFFFFFF;
@@ -325,42 +330,182 @@ void Detect(IplImage* pSrc, IplImage* pSrc3C)
 	{
 		for(int j = i+1; j < N; j++)
 		{
-			double tempDis = Get2PointDis(center[i], center[j]);
+			double tempDis = Get2PointDis(PointCenter[i], PointCenter[j]);
 			if(tempDis < distance)
 				distance = tempDis;
 
 		}
 	}
 
+	CPoint PicCenter;//={width/2, height/2};
+	PicCenter.x=width/2;
+	PicCenter.y=height/2;
 
 	//5寻找基坐标
-	BaseCoordinate* baseCoordinate = new BaseCoordinate[N/8];//每个栅格最少有8个1
-	int BaseCoordinateNum = FindBaseCoordinate(center, N, distance, baseCoordinate);	
+	BaseCoordinate* baseCoordinate = (BaseCoordinate*)malloc(sizeof(BaseCoordinate)*N/8);//每个栅格最少有8个1
+	int BaseCoordinateNum = FindBaseCoordinate(PointCenter, N, distance, baseCoordinate);
+	int SuccessUnitNum = 0;
+
+	center->x = 0;
+	center->y = 0;
+	double CenterX = 0;
+	double CenterY = 0;
+	double Psize = 0;
+	double tempX,tempY,tempPsize;
 	for(int i = 0; i < BaseCoordinateNum; i++)
 	{
-		GetXyCoordinate(pSrc3C, baseCoordinate[i].pt1, baseCoordinate[i].pt2, center, N, distance, baseCoordinate[i].direction);
+		bool success = GetXyCoordinate(baseCoordinate[i].pt1, baseCoordinate[i].pt2, PointCenter, N, distance, baseCoordinate[i].direction, PicCenter, &tempX, &tempY, &tempPsize);
+		
+		if(success)
+		{
+			//求平均提高精度
+			CString tmp;
+			tmp.Format("x:%f，y:%f，PixelSize:%f\n", tempX, tempY, tempPsize);
+			Outcome+=tmp;
+			//printf("x:%f，y:%f，PixelSize:%f\n", tempX, tempY, tempPsize);
+			CenterX += tempX;
+			CenterY += tempY;
+			Psize += tempPsize;
+			SuccessUnitNum++;
+			
+			//测试时如果精度够，可以提高跳出以提高检测速度
+			//if(SuccessUnitNum==5)
+			//	break;
+		}		
+	}
+	if(SuccessUnitNum==0)//没有检测出一个可用的单元
+	{
+		free(PointCenter);
+		free(baseCoordinate);
+		free(pDataGaussian);
+		free(pData);
+		free(typeImg);
+		return 0;
 	}
 	
-	delete []center;
-	delete []baseCoordinate;
-	//cvNamedWindow("Src", 0);
-	//cvShowImage("Src", pThresholdImg);
+	center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
+	center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
+	(*pixelsize) = (int)(Psize/SuccessUnitNum/0.01+0.5);
+
+
+	free(PointCenter);
+	free(baseCoordinate);
+	free(pDataGaussian);
+	free(pData);
+	free(typeImg);
+	return 1;
 }
 
-void drawArrow(IplImage* img, CvPoint pStart, CvPoint pEnd, int len, int alpha,  CvScalar& color, int thickness, int lineType)
+#define S 23
+#define T (0.15f)
+
+void adaptiveThreshold_C(BYTE* input, int IMAGE_WIDTH, int IMAGE_HEIGHT, int IMAGE_WIDESTEP, BYTE* bin)
 {
-	  const double PI = 3.1415926;    
-	  Point arrow;    
-	  //计算 θ 角（最简单的一种情况在下面图示中已经展示，关键在于 atan2 函数，详情见下面）   
-	  double angle = atan2((double)(pStart.y - pEnd.y), (double)(pStart.x - pEnd.x));
-	  cvLine(img, pStart, pEnd, color, thickness, lineType);
-	  //line(img, pStart, pEnd, color, thickness, lineType);   
-	  //计算箭角边的另一端的端点位置（上面的还是下面的要看箭头的指向，也就是pStart和pEnd的位置） 
-	  arrow.x = (int)(pEnd.x + len * cos(angle + PI * alpha / 180));     
-	  arrow.y = (int)(pEnd.y + len * sin(angle + PI * alpha / 180));  
-	  //line(img, pEnd, arrow, color, thickness, lineType);
-	  cvLine(img, pEnd, arrow, color, thickness, lineType);   
-	  arrow.x = (int)(pEnd.x + len * cos(angle - PI * alpha / 180));     
-	  arrow.y = (int)(pEnd.y + len * sin(angle - PI * alpha / 180));    
-	  cvLine(img, pEnd, arrow, color, thickness, lineType);
- }
+	unsigned long* integralImg = 0;
+	int i, j;
+	long sum=0;
+	int count=0;
+	int index;
+	int x1, y1, x2, y2;
+	int s2 = S/2;
+
+	// create the integral image
+	integralImg = (unsigned long*)malloc(IMAGE_WIDESTEP*IMAGE_HEIGHT*sizeof(unsigned long*));
+	memset(integralImg,0,sizeof(unsigned long*)*IMAGE_WIDESTEP*IMAGE_HEIGHT);
+
+	for (i=0; i<IMAGE_WIDTH; i++)
+	{
+		// reset this column sum
+		sum = 0;
+
+		for (j=0; j<IMAGE_HEIGHT; j++)
+		{
+			index = j*IMAGE_WIDESTEP+i;
+
+			sum += input[index];
+			if (i==0)
+				integralImg[index] = sum;
+			else
+				integralImg[index] = integralImg[index-1] + sum;
+		}
+	}
+
+	// perform thresholding
+	for (i=0; i<IMAGE_WIDTH; i++)
+	{
+		for (j=0; j<IMAGE_HEIGHT; j++)
+		{
+			index = j*IMAGE_WIDESTEP+i;
+
+			// set the SxS region
+			x1=i-s2; x2=i+s2;
+			y1=j-s2; y2=j+s2;
+
+			// check the border
+			if (x1 < 0) x1 = 0;
+			if (x2 >= IMAGE_WIDTH) x2 = IMAGE_WIDTH-1;
+			if (y1 < 0) y1 = 0;
+			if (y2 >= IMAGE_HEIGHT) y2 = IMAGE_HEIGHT-1;
+
+			count = (x2-x1)*(y2-y1);
+
+			// I(x,y)=s(x2,y2)-s(x1,y2)-s(x2,y1)+s(x1,x1)
+			sum = integralImg[y2*IMAGE_WIDESTEP+x2] -
+				integralImg[y1*IMAGE_WIDESTEP+x2] -
+				integralImg[y2*IMAGE_WIDESTEP+x1] +
+				integralImg[y1*IMAGE_WIDESTEP+x1];
+
+			if ((long)(input[index]*count) < (long)(sum*(1.0-T)))
+				bin[index] = 0;
+			else
+				bin[index] = 255;
+		}
+	}
+
+	free (integralImg);
+}
+
+void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, int height)
+{
+	int i,j,sum,index,m,n;
+	int pos;
+	int templates[25] = { 1, 4, 7, 4, 1, 
+						  4, 16, 26, 16, 4, 
+						  7, 26, 41, 26, 7,
+						  4, 16, 26, 16, 4, 
+						  1, 4, 7, 4, 1 };//273
+
+	//int templates[49] = { 1, 4, 7, 10, 7, 4, 1,//34
+	//					  4, 12, 26, 33, 26, 12, 4,//117
+	//					  7, 26, 55, 71, 55, 26, 7,//247
+	//					  10, 33, 71, 91, 71, 33, 10,//319
+	//					  7, 26, 55, 71, 55, 26, 7,//247
+	//					  4, 12, 26, 33, 26, 12, 4,//117
+	//					  1, 4, 7, 10, 7, 4, 1};//34;1115
+	
+	memcpy ( smooth, corrupted, width*height*sizeof(unsigned char) );
+	for (j=0;j<height;j++)
+	{
+		for (i=0;i<width;i++)
+		{
+			sum = 0;
+			index = 0;
+			for ( m=j-2; m<j+3; m++)
+			{
+				for (n=i-2; n<i+3; n++)
+				{
+					pos = m*width + n;
+					if(pos<0)
+						pos=0;
+					else if( pos>(height-1)*(width-1) )
+						pos = (height-1)*(width-1);
+					sum += corrupted[pos] * templates[index++];
+				}
+			}
+			sum /= 273;
+			if (sum > 255)
+				sum = 255;
+			smooth [ j*width+i ] = sum;
+		}
+	}
+}
