@@ -41,7 +41,7 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 	int endpt1_idx, endpt2_idx;
 	double delta_4x,delta_4y;
 
-	double sigma = 1.95;//适应度参数，该参数应该小于2
+	double sigma = 1.8;//适应度参数，该参数应该小于2
 	const int des5_1Num = 5;//找5个1
 	int pt5Idx[des5_1Num]={0};
 	for(int i = 0; i < N; i++)
@@ -284,6 +284,113 @@ bool GetXyCoordinate(int endPt1, int endPt2, CPoint* PointCenter, int N, double 
 	return true;
 }
 
+int small_gaussian[4][4] =
+{
+	{1024}, 
+	{512, 256}, 
+	{384 , 256, 64},
+	{288, 224, 112, 32}
+};
+
+
+//多通道图像高斯平滑
+void MyGaussian(unsigned char *pSrcData, unsigned char *pDesData, int Width, int Height)
+{
+	int i,j,k,m;
+	//int Width=pSrc->width;
+	//int Height=pSrc->height;
+	int nCh=1;
+	int widestep=Width;
+	BYTE * Data=pSrcData;	
+	BYTE * sData;
+	int SmoothRadio=3;
+	int pos,rpos;
+	int Temp;
+	int *  pGauTepData=NULL;
+
+	//根据SMOOTHRADIO判断是哪个数组
+	if (SmoothRadio==1)
+	{
+		pGauTepData=small_gaussian[1];
+	}
+	else if(SmoothRadio==2)
+	{
+		pGauTepData=small_gaussian[2];
+	}
+	else if(SmoothRadio==3)
+	{
+		pGauTepData=small_gaussian[3];
+	}
+	else
+	{
+
+	}
+
+	BYTE * rfilter=(BYTE*)malloc(sizeof(BYTE)*Width*Height);
+	sData=rfilter;
+	//行滤波
+	pos=0;
+	rpos=0;
+	for (i=0;i<Height;i++)
+	{
+		for (j=3;j<Width-3;j++)
+		{
+			rpos=pos+j*nCh;
+			for (m=0;m<nCh;m++)
+			{
+				Temp=Data[rpos+m]*pGauTepData[0];
+				for (k=1;k<=SmoothRadio;k++)
+				{
+					Temp+=(Data[rpos+m-k*nCh]+Data[rpos+m+k*nCh])*pGauTepData[k];
+				}
+
+				sData[rpos+m]=Temp>>10;
+			}
+		}
+		pos+=widestep;
+	}
+
+	sData=pDesData;
+	Data=rfilter;
+	pos=3*widestep;
+	rpos=0;
+	for (i=3;i<Height-3;i++)
+	{
+		for (j=3;j<Width-3;j++)
+		{
+			rpos=pos+j*nCh;
+			for (m=0;m<nCh;m++)
+			{
+				Temp=Data[rpos+m]*pGauTepData[0];
+				for (k=1;k<=SmoothRadio;k++)
+				{
+					Temp+=(Data[rpos+m-k*widestep]+Data[rpos+m+k*widestep])*pGauTepData[k];
+				}
+
+				sData[rpos+m]=Temp>>10;
+			}
+		}
+		pos+=widestep;
+	}
+
+	free(rfilter);
+}
+
+void cvText(IplImage* img, const char* text, int x, int y)
+{
+	CvFont font;
+
+	double hscale = 0.3;
+	double vscale = 0.3;
+	int linewidth = 1;
+	cvInitFont(&font,CV_FONT_HERSHEY_SIMPLEX ,hscale,vscale,0,linewidth);
+
+	CvScalar textColor =cvScalar(0,255,255);
+	CvPoint textPos =cvPoint(x, y);
+
+	cvPutText(img, text, textPos, &font,textColor);
+}
+
 int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *pixelsize, CString& Outcome)
 {
 
@@ -295,8 +402,8 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 
 	memcpy(pDataGaussian, yuy2buf, sizeof(unsigned char)*(width*height));
 
-	gaussianFilter(yuy2buf, pDataGaussian, width, height);
-
+	//gaussianFilter(yuy2buf, pDataGaussian, width, height);
+	MyGaussian(yuy2buf, pDataGaussian, width, height);
 
 	//2.二值化
 	unsigned char* pData = (unsigned char*)malloc(sizeof(BYTE)*width*height);
@@ -317,23 +424,48 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	extern Region region[1000];
 	char txt[255]="";
 
-	//4.通过找最小的两点距离确定栅格距离distance	
+	//4.通过找最小的两点距离确定栅格距离distance
+	//IplImage* pShow = cvLoadImage(".//samples//Image03.bmp",1);//FOR_TEST
+	//char NumChar[255];//FOR_TEST
 	CPoint* PointCenter = (CPoint*)malloc(sizeof(CPoint)*N);//求连通域的最小外接矩阵的中心
 	for(int i = 0; i < N; i++)
 	{
 		PointCenter[i].x = (region[i].left+region[i].right)>>1;
 		PointCenter[i].y = (region[i].top+region[i].bottom)>>1;
+		//if(i==8||i==19)
+		//{
+		//sprintf_s(NumChar,255, "%d",i);
+		//cvText(pShow,NumChar, PointCenter[i].x, PointCenter[i].y);
+		//cvRectangle(pShow, cvPoint(region[i].left, region[i].top), cvPoint(region[i].right, region[i].bottom), cvScalar(255,0,255));//FOR_TEST
+		//}
 	}
-
+	
+	//////////////////////////////////////////////////////////////////////////
+	//cvNamedWindow("test",0);
+	//cvShowImage("test", pShow);
+	//cvWaitKey();
+	//////////////////////////////////////////////////////////////////////////
+	
+	
 	double distance = 0xFFFFFFF;
+	double boxRatio = 0.2;//找最短距离时去除在图片四周的点，防止找到错误的diastance
+	int leftBox = boxRatio * width;
+	int rightBox = width - leftBox;
+	int topBox = boxRatio * height;
+	int bottomBox = height - topBox;
 	for(int i = 0; i < N; i++)
 	{
+		if(PointCenter[i].x < leftBox || PointCenter[i].x > rightBox || PointCenter[i].y < topBox || PointCenter[i].y > bottomBox)
+			continue;
 		for(int j = i+1; j < N; j++)
 		{
+			if(PointCenter[j].x < leftBox || PointCenter[j].x > rightBox || PointCenter[j].y < topBox || PointCenter[j].y > bottomBox)
+				continue;
 			double tempDis = Get2PointDis(PointCenter[i], PointCenter[j]);
 			if(tempDis < distance)
+			{
 				distance = tempDis;
-
+			}
 		}
 	}
 
