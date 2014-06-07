@@ -7,14 +7,14 @@
 
 int g_ImgX = 0;
 int g_ImgY = 0;
- bool IsPointInImg(CPoint pt)
+bool IsPointInImg(CPoint pt)
 {
 	if(pt.x>=0 && pt.y>=0 && pt.x<g_ImgX && pt.y<g_ImgY)
 		return true;
 	return false;
 }
 
- double Get2PointDis(CPoint a, CPoint b)
+double Get2PointDis(CPoint a, CPoint b)
 {
 	return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y);
 }
@@ -40,7 +40,7 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 	int endpt1_idx, endpt2_idx;
 	double delta_4x,delta_4y;
 
-	double sigma = 1.95;//适应度参数，该参数应该小于2
+	double sigma = 1.8;//适应度参数，该参数应该小于2
 	const int des5_1Num = 5;//找5个1
 	int pt5Idx[des5_1Num]={0};
 	for(int i = 0; i < N; i++)
@@ -231,52 +231,146 @@ bool GetXyCoordinate(int endPt1, int endPt2, CPoint* PointCenter, int N, double 
 
 	//计算原始坐标系x，y坐标轴方向
 	CPoint StartPt,EndPt;
-	
+
 	StartPt.x = direction?xPt[7].x:yPt[2].x;
 	StartPt.y = direction?xPt[7].y:yPt[2].y;
 	EndPt.x = direction?xPt[9].x:yPt[0].x;
 	EndPt.y = direction?xPt[9].y:yPt[0].y;
 
-	CPoint V_X={(EndPt.x-StartPt.x), (EndPt.y-StartPt.y)};//原始x坐标向量
-	
+	CPoint V_X;//={(), (EndPt.y-StartPt.y)};//原始x坐标向量
+	V_X.x=EndPt.x-StartPt.x;
+	V_X.y=EndPt.y-StartPt.y;
+
 	StartPt.x = direction?xPt[7].x:yPt[2].x;
 	StartPt.y = direction?xPt[7].y:yPt[2].y;
 	EndPt.x = direction?yPt[2].x:xPt[7].x;
 	EndPt.y = direction?yPt[2].y:xPt[7].y;
 
-		
-	CPoint V_Y={(EndPt.x-StartPt.x), (EndPt.y-StartPt.y)};//原始y坐标向量
-	
+
+	CPoint V_Y;//={(EndPt.x-StartPt.x), (EndPt.y-StartPt.y)};//原始y坐标向量
+	V_Y.x=EndPt.x-StartPt.x;
+	V_Y.y=EndPt.y-StartPt.y;
+
 	double xyDotP = DotProduct(V_X, V_Y);//求xy坐标向量的内积，因为x,y坐标垂直，期望值应该为0，大多数能符合说明方向是正确的
-	
+
 	//求xy坐标向量的模
 	double V_Xmode = sqrt(1.0*(V_X.x*V_X.x + V_X.y*V_X.y));
 	double V_Ymode = sqrt(1.0*(V_Y.x*V_Y.x + V_Y.y*V_Y.y));
-		
+
 
 	//检测单元的中心点
 	CPoint UnitCenter;
 	UnitCenter.x = (xPt[7].x + yPt[2].x)/2;
 	UnitCenter.y = (xPt[7].y + yPt[2].y)/2;
-	
+
 
 	CPoint V_U2P;//检测单元的中心点与图片中心组成的向量，由检测单元的中心指向图片中心
 	V_U2P.x = PicCenter.x - UnitCenter.x;
 	V_U2P.y = PicCenter.y - UnitCenter.y;
-	
 
-	
+
+
 	//计算向量V_U2P在x，y方向的投影
 	double x_shadow = DotProduct(V_X, V_U2P)/V_Xmode;
 	double y_shadow = DotProduct(V_Y, V_U2P)/V_Ymode;
-	
+
 	double PixelsDis_2Point = sqrt(delta_x*delta_x + delta_y*delta_y);
 	(*PSize) = REALDIS/PixelsDis_2Point ;//像素代表的实际距离
-	
+
 	(*tempX) = (*PSize) * x_shadow + xOut*1.98;//x方向的偏移量
 	(*tempY) = (*PSize) * y_shadow + yOut*1.98;//y方向的偏移量
-	
+
 	return true;
+}
+
+//多通道图像高斯平滑
+int small_gaussian[4][4] =
+{
+	{1024}, 
+	{512, 256}, 
+	{384 , 256, 64},
+	{288, 224, 112, 32}
+};
+void MyGaussian(unsigned char *pSrcData, unsigned char *pDesData, int Width, int Height)
+{
+	int i,j,k,m;
+	//int Width=pSrc->width;
+	//int Height=pSrc->height;
+	int nCh=1;
+	int widestep=Width;
+	BYTE * Data=pSrcData;	
+	BYTE * sData;
+	int SmoothRadio=3;
+	int pos,rpos;
+	int Temp;
+	int *  pGauTepData=NULL;
+
+	//根据SMOOTHRADIO判断是哪个数组
+	if (SmoothRadio==1)
+	{
+		pGauTepData=small_gaussian[1];
+	}
+	else if(SmoothRadio==2)
+	{
+		pGauTepData=small_gaussian[2];
+	}
+	else if(SmoothRadio==3)
+	{
+		pGauTepData=small_gaussian[3];
+	}
+	else
+	{
+
+	}
+
+	BYTE * rfilter=(BYTE*)malloc(sizeof(BYTE)*Width*Height);
+	sData=rfilter;
+	//行滤波
+	pos=0;
+	rpos=0;
+	for (i=0;i<Height;i++)
+	{
+		for (j=3;j<Width-3;j++)
+		{
+			rpos=pos+j*nCh;
+			for (m=0;m<nCh;m++)
+			{
+				Temp=Data[rpos+m]*pGauTepData[0];
+				for (k=1;k<=SmoothRadio;k++)
+				{
+					Temp+=(Data[rpos+m-k*nCh]+Data[rpos+m+k*nCh])*pGauTepData[k];
+				}
+
+				sData[rpos+m]=Temp>>10;
+			}
+		}
+		pos+=widestep;
+	}
+
+	sData=pDesData;
+	Data=rfilter;
+	pos=3*widestep;
+	rpos=0;
+	for (i=3;i<Height-3;i++)
+	{
+		for (j=3;j<Width-3;j++)
+		{
+			rpos=pos+j*nCh;
+			for (m=0;m<nCh;m++)
+			{
+				Temp=Data[rpos+m]*pGauTepData[0];
+				for (k=1;k<=SmoothRadio;k++)
+				{
+					Temp+=(Data[rpos+m-k*widestep]+Data[rpos+m+k*widestep])*pGauTepData[k];
+				}
+
+				sData[rpos+m]=Temp>>10;
+			}
+		}
+		pos+=widestep;
+	}
+
+	free(rfilter);
 }
 
 int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *pixelsize)
@@ -290,13 +384,13 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 
 	memcpy(pDataGaussian, yuy2buf, sizeof(unsigned char)*(width*height));
 
-	gaussianFilter(yuy2buf, pDataGaussian, width, height);
-
+	//gaussianFilter(yuy2buf, pDataGaussian, width, height);
+	MyGaussian(yuy2buf, pDataGaussian, width, height);
 
 	//2.二值化
 	unsigned char* pData = (unsigned char*)malloc(sizeof(BYTE)*width*height);
 	adaptiveThreshold_C(pDataGaussian, width, height, width, pData);
-	
+
 
 	//3.寻找连通区域
 	int * typeImg=(int*)malloc(sizeof(int)*height*width);
@@ -312,7 +406,7 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	extern Region region[1000];
 	char txt[255]="";
 
-	//4.通过找最小的两点距离确定栅格距离distance	
+	//4.通过找最小的两点距离确定栅格距离distance
 	CPoint* PointCenter = (CPoint*)malloc(sizeof(CPoint)*N);//求连通域的最小外接矩阵的中心
 	for(int i = 0; i < N; i++)
 	{
@@ -321,18 +415,30 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	}
 
 	double distance = 0xFFFFFFF;
+	double boxRatio = 0.2;//找最短距离时去除在图片四周的点，防止找到错误的diastance
+	int leftBox = (int)(boxRatio * width);
+	int rightBox = width - leftBox;
+	int topBox = (int)(boxRatio * height);
+	int bottomBox = height - topBox;
 	for(int i = 0; i < N; i++)
 	{
+		if(PointCenter[i].x < leftBox || PointCenter[i].x > rightBox || PointCenter[i].y < topBox || PointCenter[i].y > bottomBox)
+			continue;
 		for(int j = i+1; j < N; j++)
 		{
+			if(PointCenter[j].x < leftBox || PointCenter[j].x > rightBox || PointCenter[j].y < topBox || PointCenter[j].y > bottomBox)
+				continue;
 			double tempDis = Get2PointDis(PointCenter[i], PointCenter[j]);
 			if(tempDis < distance)
+			{
 				distance = tempDis;
-
+			}
 		}
 	}
 
-	CPoint PicCenter={width/2, height/2};
+	CPoint PicCenter;//={width/2, height/2};
+	PicCenter.x=width/2;
+	PicCenter.y=height/2;
 
 	//5寻找基坐标
 	BaseCoordinate* baseCoordinate = (BaseCoordinate*)malloc(sizeof(BaseCoordinate)*N/8);//每个栅格最少有8个1
@@ -348,7 +454,7 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	for(int i = 0; i < BaseCoordinateNum; i++)
 	{
 		bool success = GetXyCoordinate(baseCoordinate[i].pt1, baseCoordinate[i].pt2, PointCenter, N, distance, baseCoordinate[i].direction, PicCenter, &tempX, &tempY, &tempPsize);
-		
+
 		if(success)
 		{
 			//求平均提高精度
@@ -357,8 +463,8 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 			CenterY += tempY;
 			Psize += tempPsize;
 			SuccessUnitNum++;
-			
-			//测试时如果精度够，可以提高跳出以提高检测速度
+
+			//测试时如果精度够，可以提早跳出以提高检测速度
 			//if(SuccessUnitNum==5)
 			//	break;
 		}		
@@ -372,7 +478,7 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 		free(typeImg);
 		return 0;
 	}
-	
+
 	center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
 	center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
 	(*pixelsize) = (int)(Psize/SuccessUnitNum/0.01+0.5);
@@ -459,20 +565,20 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 {
 	int i,j,sum,index,m,n;
 	int pos;
-	//int templates[25] = { 1, 4, 7, 4, 1, 
-	//					  4, 16, 26, 16, 4, 
-	//					  7, 26, 41, 26, 7,
-	//					  4, 16, 26, 16, 4, 
-	//					  1, 4, 7, 4, 1 };//273
+	int templates[25] = { 1, 4, 7, 4, 1, 
+		4, 16, 26, 16, 4, 
+		7, 26, 41, 26, 7,
+		4, 16, 26, 16, 4, 
+		1, 4, 7, 4, 1 };//273
 
-	int templates[49] = { 1, 4, 7, 10, 7, 4, 1,//34
-						  4, 12, 26, 33, 26, 12, 4,//117
-						  7, 26, 55, 71, 55, 26, 7,//247
-						  10, 33, 71, 91, 71, 33, 10,//319
-						  7, 26, 55, 71, 55, 26, 7,//247
-						  4, 12, 26, 33, 26, 12, 4,//117
-						  1, 4, 7, 10, 7, 4, 1};//34;1115
-	
+	//int templates[49] = { 1, 4, 7, 10, 7, 4, 1,//34
+	//					  4, 12, 26, 33, 26, 12, 4,//117
+	//					  7, 26, 55, 71, 55, 26, 7,//247
+	//					  10, 33, 71, 91, 71, 33, 10,//319
+	//					  7, 26, 55, 71, 55, 26, 7,//247
+	//					  4, 12, 26, 33, 26, 12, 4,//117
+	//					  1, 4, 7, 10, 7, 4, 1};//34;1115
+
 	memcpy ( smooth, corrupted, width*height*sizeof(unsigned char) );
 	for (j=0;j<height;j++)
 	{
@@ -480,9 +586,9 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 		{
 			sum = 0;
 			index = 0;
-			for ( m=j-3; m<j+4; m++)
+			for ( m=j-2; m<j+3; m++)
 			{
-				for (n=i-3; n<i+4; n++)
+				for (n=i-2; n<i+3; n++)
 				{
 					pos = m*width + n;
 					if(pos<0)
@@ -492,7 +598,7 @@ void gaussianFilter(unsigned char* corrupted, unsigned char* smooth, int width, 
 					sum += corrupted[pos] * templates[index++];
 				}
 			}
-			sum /= 1115;
+			sum /= 273;
 			if (sum > 255)
 				sum = 255;
 			smooth [ j*width+i ] = sum;

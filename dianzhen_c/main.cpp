@@ -19,8 +19,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	unsigned char* pSrcData = (unsigned char*)pSrc->imageData;
 	
-	cvSmooth(pSrc, pSrc, CV_GAUSSIAN, 3);
-	
 	unsigned char* pImgData = (unsigned char*)malloc(sizeof(unsigned char)*(pSrc->width*pSrc->height));
 	for(int i = 0; i < pSrc->height; i++)
 		for(int j = 0; j < pSrc->width; j++)
