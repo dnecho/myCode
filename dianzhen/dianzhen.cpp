@@ -8,9 +8,10 @@
 
 int g_ImgX = 0;
 int g_ImgY = 0;
+double g_distance = 0.0;//去除掉边界
  bool IsPointInImg(CPoint pt)
 {
-	if(pt.x>=0 && pt.y>=0 && pt.x<g_ImgX && pt.y<g_ImgY)
+	if(pt.x>=g_distance && pt.y>=g_distance && pt.x<g_ImgX-g_distance && pt.y<g_ImgY-g_distance)
 		return true;
 	return false;
 }
@@ -134,19 +135,43 @@ int FindBaseCoordinate(CPoint* center, int N, double distance, BaseCoordinate* b
 				continue;
 
 			//在5个点两侧pt1,pt2是0的基础上，判断pt1,pt2上下是否为10/11
-			const int ab_num = 2;
+			const int ab_num = 3;
 			CPoint a[ab_num],b[ab_num];//(above,below)
 			for(int ab_i = 0; ab_i < ab_num; ab_i++)
 			{
-				a[ab_i].x = (int)(pt1.x + delta_4y);
-				a[ab_i].y = (int)(pt1.y - delta_4x);
+				a[ab_i].x = (int)(pt1.x + (ab_i+1)*delta_4y);
+				a[ab_i].y = (int)(pt1.y - (ab_i+1)*delta_4x);
 
-				b[ab_i].x = (int)(pt1.x - delta_4y);
-				b[ab_i].y = (int)(pt1.y + delta_4x);
+				b[ab_i].x = (int)(pt2.x - (ab_i+1)*delta_4y);
+				b[ab_i].y = (int)(pt2.y + (ab_i+1)*delta_4x);
 			}
 
-			if(PointInRegion(center, N, a[1], distance)<0 && PointInRegion(center, N, b[1], distance)<0)//点a1,b1必须都为1，否则舍弃
+			if(PointInRegion(center, N, a[1], distance)<0 || PointInRegion(center, N, b[1], distance)<0)//点a1,b1必须都为1，否则舍弃
 				continue;
+			if(PointInRegion(center, N, a[2], distance)>=0 || PointInRegion(center, N, b[2], distance)>=0)//点a2,b2必须都为0，否则舍弃
+				continue;
+				
+
+			//判断是否有a2,b2的右边是否有5个0
+			int zeroNum = 1;
+			CPoint tmpPta,tmpPtb;
+
+			while(zeroNum<=6)
+			{
+				tmpPta.x = a[2].x+zeroNum*delta_4x;
+				tmpPta.y = a[2].y+zeroNum*delta_4y;
+
+				tmpPtb.x = b[2].x+zeroNum*delta_4x;
+				tmpPtb.y = b[2].y+zeroNum*delta_4y;
+				if(PointInRegion(center, N, tmpPta, distance)>=0 || PointInRegion(center, N, tmpPtb, distance)>=0)//如果该位置不是0，跳出
+					break;
+				zeroNum++;
+
+			}
+			if(zeroNum<6)
+				continue;
+
+				
 			int a0_Region = PointInRegion(center, N, a[0], distance);
 			int b0_Region = PointInRegion(center, N, b[0], distance);
 
@@ -391,6 +416,8 @@ void cvText(IplImage* img, const char* text, int x, int y)
 	cvPutText(img, text, textPos, &font,textColor);
 }
 
+
+
 int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *pixelsize, CString& Outcome)
 {
 
@@ -419,24 +446,71 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 			typeImg[i*width+j]=-1;
 		}
 	}
-	int N=KeyGrow(pData,width,height,typeImg);
+	int N=KeyGrow(pData,width,height,typeImg);	
 
 	extern Region region[1000];
+	
+	int True_region_num = N;
+	for (int i=0;i<N;i++)
+	{
+		//宽度比较大的，并且占空比比较大
+		int w=region[i].right-region[i].left+1;
+		int h=region[i].bottom-region[i].top+1;
+		if ( region[i].PointNum<=5)
+		{
+			region[i].IsOK=false;
+			True_region_num--;
+		}
+		
+		//double tmp_ratio = w*1.0/h;
+		//if(tmp_ratio>2||tmp_ratio<0.5)
+		//{
+		//	region[i].IsOK=false;
+		//	True_region_num--;
+		//}
+
+		//太高的太长的并且占空比比较大的去掉
+		if (w<=2&&h<=2)
+		{
+			region[i].IsOK=false;
+			True_region_num--;
+		}
+	}
+	Region* TrueRegion = (Region*)malloc(sizeof(Region)*N);
+	True_region_num = 0;
+	for(int i = 0; i< N; i++)
+	{
+		if(region[i].IsOK)
+		{
+			TrueRegion[True_region_num].bottom = region[i].bottom;
+			TrueRegion[True_region_num].left = region[i].left;
+			TrueRegion[True_region_num].right = region[i].right;
+			TrueRegion[True_region_num].top = region[i].top;
+			
+			True_region_num++;
+		}
+	}
+	
+	N = True_region_num;
+
 	char txt[255]="";
 
 	//4.通过找最小的两点距离确定栅格距离distance
-	//IplImage* pShow = cvLoadImage(".//samples//Image03.bmp",1);//FOR_TEST
+	//IplImage* pShow = cvLoadImage("D:\\2014项目\\0427点阵\\01.bmp",1);//FOR_TEST
 	//char NumChar[255];//FOR_TEST
 	CPoint* PointCenter = (CPoint*)malloc(sizeof(CPoint)*N);//求连通域的最小外接矩阵的中心
 	for(int i = 0; i < N; i++)
 	{
-		PointCenter[i].x = (region[i].left+region[i].right)>>1;
-		PointCenter[i].y = (region[i].top+region[i].bottom)>>1;
+		PointCenter[i].x = (TrueRegion[i].left+TrueRegion[i].right)>>1;
+		PointCenter[i].y = (TrueRegion[i].top+TrueRegion[i].bottom)>>1;
 		//if(i==8||i==19)
 		//{
 		//sprintf_s(NumChar,255, "%d",i);
 		//cvText(pShow,NumChar, PointCenter[i].x, PointCenter[i].y);
-		//cvRectangle(pShow, cvPoint(region[i].left, region[i].top), cvPoint(region[i].right, region[i].bottom), cvScalar(255,0,255));//FOR_TEST
+		//if(TrueRegion[i].IsOK)
+		//	cvRectangle(pShow, cvPoint(TrueRegion[i].left, TrueRegion[i].top), cvPoint(TrueRegion[i].right, TrueRegion[i].bottom), cvScalar(255,0,255));//FOR_TEST
+		//else
+		//	cvRectangle(pShow, cvPoint(TrueRegion[i].left, TrueRegion[i].top), cvPoint(TrueRegion[i].right, TrueRegion[i].bottom), cvScalar(0,0,255));//FOR_TEST	
 		//}
 	}
 	
@@ -468,7 +542,8 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 			}
 		}
 	}
-
+	
+	g_distance = sqrt(distance);//去除掉边界
 	CPoint PicCenter;//={width/2, height/2};
 	PicCenter.x=width/2;
 	PicCenter.y=height/2;
@@ -517,7 +592,7 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	
 	center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
 	center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
-	(*pixelsize) = (int)(Psize/SuccessUnitNum/0.01+0.5);
+	(*pixelsize) = (int)(Psize/SuccessUnitNum/0.001+0.5);
 
 
 	free(PointCenter);
@@ -525,6 +600,7 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	free(pDataGaussian);
 	free(pData);
 	free(typeImg);
+	free(TrueRegion);
 	return 1;
 }
 

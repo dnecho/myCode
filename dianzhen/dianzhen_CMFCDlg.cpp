@@ -220,7 +220,7 @@ void Cdianzhen_CMFCDlg::OnBnClickedButton2()
 	}else
 	{
 		CString tmp;
-		tmp.Format("求平均值final\tx:%d，y:%d，PixelSize:%d\n", center.x, center.y, pixelsize);
+		tmp.Format("求平均值final\tx(单位0.01mm):%d，y(单位0.01mm):%d，PixelSize(单位0.001mm):%d\n", center.x, center.y, pixelsize);
 		Outcome += tmp;
 		AfxMessageBox(Outcome);
 	}
