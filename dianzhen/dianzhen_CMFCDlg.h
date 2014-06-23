@@ -18,6 +18,7 @@ public:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV Ö§³Ö
 
 	IplImage* pSrc;
+	double PicScale;
 	CString PicName;
 	CString Outcome;
 

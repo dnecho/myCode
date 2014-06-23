@@ -98,6 +98,7 @@ BOOL Cdianzhen_CMFCDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	pSrc = NULL;
+	PicScale = 1;
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -172,14 +173,17 @@ void Cdianzhen_CMFCDlg::OnBnClickedButton1()
 			pSrc=NULL;
 		}
 
-		pSrc = cvLoadImage(FileName.GetBuffer(0),0);
+		IplImage* pSrc1 = cvLoadImage(FileName.GetBuffer(0),0);
+
 		PicName=FileName;
-		//int dwidth=500;
-		//int dheight=dwidth*pSrc->height/pSrc->width;
+		int dwidth=800;
+		
+		PicScale = dwidth*1.0/pSrc1->width;
+		int dheight=(int)(pSrc1->height*PicScale);
 
-		//psrc=cvCreateImage(cvSize(dwidth,dheight),src->depth,src->nChannels);
-		//cvResize(src,psrc);
-
+		pSrc=cvCreateImage(cvSize(dwidth,dheight),pSrc1->depth,pSrc1->nChannels);
+		cvResize(pSrc1,pSrc);
+		cvReleaseImage(&pSrc1);
 		//cvNamedWindow("原图",0);
 		//cvShowImage("原图",pSrc3C);
 
@@ -220,7 +224,7 @@ void Cdianzhen_CMFCDlg::OnBnClickedButton2()
 	}else
 	{
 		CString tmp;
-		tmp.Format("求平均值final\tx(单位0.01mm):%d，y(单位0.01mm):%d，PixelSize(单位0.001mm):%d\n", center.x, center.y, pixelsize);
+		tmp.Format("求平均值final\tx(单位0.01mm):%d，y(单位0.01mm):%d，PixelSize(单位0.001mm):%d\n", center.x, center.y, (int)(pixelsize*PicScale+0.5));
 		Outcome += tmp;
 		AfxMessageBox(Outcome);
 	}

@@ -436,6 +436,18 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 	unsigned char* pData = (unsigned char*)malloc(sizeof(BYTE)*width*height);
 	adaptiveThreshold_C(pDataGaussian, width, height, width, pData);
 	
+	//IplImage* pTestThreshold = cvLoadImage("D:\\2014项目\\0427点阵\\160x120\\Image1.bmp",0);
+	//for(int i = 0; i <height; i++)
+	//{
+	//	for(int j = 0; j <width; j++)
+	//	{
+	//		pTestThreshold->imageData[j+i*pTestThreshold->widthStep] = pData[j+i*width];
+	//	}
+	//}
+	//cvNamedWindow("yuzhi", 0);
+	//cvShowImage("yuzhi", pTestThreshold);
+	//cvWaitKey();
+	
 
 	//3.寻找连通区域
 	int * typeImg=(int*)malloc(sizeof(int)*height*width);
@@ -456,11 +468,11 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 		//宽度比较大的，并且占空比比较大
 		int w=region[i].right-region[i].left+1;
 		int h=region[i].bottom-region[i].top+1;
-		if ( region[i].PointNum<=5)
-		{
-			region[i].IsOK=false;
-			True_region_num--;
-		}
+		//if ( region[i].PointNum<=5)
+		//{
+		//	region[i].IsOK=false;
+		//	True_region_num--;
+		//}
 		
 		//double tmp_ratio = w*1.0/h;
 		//if(tmp_ratio>2||tmp_ratio<0.5)
@@ -470,11 +482,11 @@ int process(unsigned char * yuy2buf, int width, int height, Axis *center, int *p
 		//}
 
 		//太高的太长的并且占空比比较大的去掉
-		if (w<=2&&h<=2)
-		{
-			region[i].IsOK=false;
-			True_region_num--;
-		}
+		//if (w<=2&&h<=2)
+		//{
+		//	region[i].IsOK=false;
+		//	True_region_num--;
+		//}
 	}
 	Region* TrueRegion = (Region*)malloc(sizeof(Region)*N);
 	True_region_num = 0;
