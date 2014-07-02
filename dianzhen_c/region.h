@@ -1,7 +1,9 @@
 #ifndef REGION_H
 #define REGION_H
 
-typedef  unsigned char BYTE;
+#define bool int
+#define false 0
+#define true 1
 
 typedef struct Region
 {
@@ -32,4 +34,5 @@ typedef struct RectCenter{
 }RectCenter;
 
 int KeyGrow(unsigned char * p, int w, int h,int * typeImg);
+
 #endif

@@ -2,35 +2,43 @@
 #include <memory.h>
 #include <malloc.h>
 Region region[1000];
-
+#define MaxPointNum 20000
 int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 {
+	int LineSize;
+	unsigned char DealPixel;
+	int * imgcopy;
+	CPoint keytype[MaxPointNum];
+	int N,nLEFT,nRight,nTOP,nBOTTOM;
+	int i,j,n,typeNum;
+	int x,y;
+	
 	if(p==0)
 	{
 		return 0;
 	}
 
 	//根据具体情况判断是否需要进行四字节对齐
-	int LineSize=(w+3)/4*4;
-	BYTE DealPixel=0;
+	LineSize=(w+3)/4*4;
+	DealPixel=0;
 
-	int * imgcopy=(int*)malloc(sizeof(int)*LineSize*h);
+	imgcopy=(int*)malloc(sizeof(int)*LineSize*h);
 	memset(imgcopy,0,sizeof(int)*LineSize*h);
 
-	const int MaxPointNum=20000;
-	CPoint keytype[MaxPointNum];
+	//const int MaxPointNum=20000;
+	//CPoint keytype[MaxPointNum];
 
 	//类别的小标
-	int N=-1;
-	int nLEFT,nRight,nTOP,nBOTTOM;
-	for (int j=0;j<h;j++)
+	N=-1;
+	//int nLEFT,nRight,nTOP,nBOTTOM;
+	for (j=0;j<h;j++)
 	{
-		for (int i=0;i<w;i++)
+		for (i=0;i<w;i++)
 		{
 			//数组下标
-			int n=-1;
+			n=-1;
 			//当前白点的数目
-			int typeNum=0;
+			typeNum=0;
 			//如果当前的是白点，并且还没有处理过，将其作为一个种子点，向四周扩散
 			if(imgcopy[j*LineSize+i]==0 && p[j*LineSize+i]==DealPixel )
 			{
@@ -53,8 +61,8 @@ int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 			while (n>=0 && n<MaxPointNum)
 			{
 				//数组末尾的值相当于POP出来
-				int x=keytype[n].x;
-				int y=keytype[n].y;
+				x=keytype[n].x;
+				y=keytype[n].y;
 
 				nLEFT=nLEFT<x?nLEFT:x;
 				nRight=nRight>x?nRight:x;
@@ -222,7 +230,7 @@ int KeyGrow(unsigned char * p, int w, int h,int * typeImg)
 			{
 				if (N>=1000)
 				{
-					delete []imgcopy;
+					free(imgcopy);
 					return 1000;
 				}
 
