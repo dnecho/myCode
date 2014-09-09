@@ -5,7 +5,7 @@
 
 int main(){
 	
-	FILE *fp = fopen("Desert.txt","r");
+	FILE *fp = fopen(".//pictxt//qvga1.txt","r");
 	int w = 0;
 	int h = 0;
 	int i,j,tmp;
@@ -37,11 +37,11 @@ int main(){
 		printf("final\tx:%d，y:%d，PixelSize:%d\n", center.x, center.y, pixelsize);
 	}else
 	{
-		printf("处理失败");
+		printf("处理失败\n");
 	}
 	t_end = clock();
-	printf("total:%d", t_end-t_start);
-	getchar();
-	//system("pause");
+	//printf("total:%d", t_end-t_start);
+	//getchar();
+	system("pause");
 
 }

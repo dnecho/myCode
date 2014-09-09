@@ -544,11 +544,12 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	CPoint* PointCenter;
 	double distance,boxRatio,tempDis;
 	int topBox,bottomBox,leftBox,rightBox;
-	CPoint PicCenter;
+	CPoint PicCenter,tmpUnitCenterPt;
 	BaseCoordinate* baseCoordinate;
 	int BaseCoordinateNum,SuccessUnitNum;
-	double CenterX,CenterY,Psize,tempX,tempY,tempPsize;
+	double CenterX,CenterY,Psize,tempX,tempY,tempPsize, tmpDisWithPicCenter,disWithPicCenter;
 	bool success;
+	int baseCoordinateUseIdx;
 	
 	//0.图像缩放
 	double PicScale;
@@ -562,7 +563,7 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	resizebuf = (unsigned char*)malloc(sizeof(unsigned char)*(resize_width*resize_height));
 	BiLinearInsert(y2ybuf, width, height, resizebuf, resize_width, resize_height, 1);
 	t_end = clock();
-	printf("BiLinearInsert:%d\n",t_end-t_start);
+	//printf("BiLinearInsert:%d\n",t_end-t_start);
 	t_start = clock();
 	g_ImgX = resize_width;
 	g_ImgY = resize_height;
@@ -574,12 +575,12 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 
 	MyGaussian(resizebuf, pDataGaussian, resize_width, resize_height);
 	t_end = clock();
-	printf("MyGaussian:%d\n",t_end-t_start);
+	//printf("MyGaussian:%d\n",t_end-t_start);
 	//2.二值化
 	t_start=clock();
 	adaptiveThreshold_C(pDataGaussian, resize_width, resize_height, resize_width, resizebuf);
 	t_end = clock();
-	printf("adaptiveThreshold_C:%d\n",t_end-t_start);
+	//printf("adaptiveThreshold_C:%d\n",t_end-t_start);
 	//3.寻找连通区域
 	t_start=clock();
 	typeImg=(int*)malloc(sizeof(int)*resize_height*resize_width);
@@ -622,6 +623,7 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	}
 	TrueRegion = (Region*)malloc(sizeof(Region)*N);
 	True_region_num = 0;
+	region[0].IsOK = false;//region[0]为图片中圆形区域外的大片黑色无效区域，直接设置为false
 	for(i = 0; i< N; i++)
 	{
 		if(region[i].IsOK)
@@ -644,7 +646,6 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	{
 		PointCenter[i].x = (TrueRegion[i].left+TrueRegion[i].right)>>1;
 		PointCenter[i].y = (TrueRegion[i].top+TrueRegion[i].bottom)>>1;
-
 	}
 
 
@@ -675,13 +676,13 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	PicCenter.x=resize_width/2;
 	PicCenter.y=resize_height/2;
 	t_end = clock();
-	printf("findDis:%d\n",t_end-t_start);
+	//printf("findDis:%d\n",t_end-t_start);
 	//5寻找基坐标
 	t_start=clock();
 	baseCoordinate = (BaseCoordinate*)malloc(sizeof(BaseCoordinate)*N/8);//每个栅格最少有8个1
 	BaseCoordinateNum = FindBaseCoordinate(PointCenter, N, distance, baseCoordinate);
 	t_end=clock();
-	printf("FindBaseCoordinate:%d\n",t_end-t_start);
+	//printf("FindBaseCoordinate:%d\n",t_end-t_start);
 	SuccessUnitNum = 0;
 
 	center->x = 0;
@@ -689,42 +690,74 @@ int process(unsigned char * y2ybuf, int width, int height, Axis *center, int *pi
 	CenterX = 0;
 	CenterY = 0;
 	Psize = 0;
-	tempX,tempY,tempPsize;
+
 	t_start=clock();
-	for(i = 0; i < BaseCoordinateNum; i++)
-	{	
-		
-		success = GetXyCoordinate(baseCoordinate[i].pt1, baseCoordinate[i].pt2, PointCenter, N, distance, baseCoordinate[i].direction, PicCenter, &tempX, &tempY, &tempPsize);
-
-		if(success)
-		{
-			//求平均提高精度
-			CenterX += tempX;
-			CenterY += tempY;
-			Psize += tempPsize;
-			SuccessUnitNum++;
-
-			////测试时如果精度够，可以提高跳出以提高检测速度
-			//if(SuccessUnitNum==5)
-			//	break;
-		}		
-	}
-	t_end=clock();
-	printf("GetXyCoordinate:%d\n",t_end-t_start);
-
-	if(SuccessUnitNum==0)//没有检测出一个可用的单元
+	disWithPicCenter = 0xFFFFFFF;
+	baseCoordinateUseIdx = 0;
+	if(BaseCoordinateNum > 1)
 	{
-		free(PointCenter);
-		free(baseCoordinate);
-		free(pDataGaussian);
-		free(resizebuf);
-		free(typeImg);
-		return 0;
+		for(i = 0; i < BaseCoordinateNum; i++)
+		{
+			tmpUnitCenterPt.x = (PointCenter[baseCoordinate[i].pt1].x + PointCenter[baseCoordinate[i].pt2].x)>>1;
+			tmpUnitCenterPt.y = (PointCenter[baseCoordinate[i].pt1].y + PointCenter[baseCoordinate[i].pt2].y)>>1;
+			tmpDisWithPicCenter = Get2PointDis(tmpUnitCenterPt, PicCenter);
+			if( tmpDisWithPicCenter < disWithPicCenter )
+			{
+				disWithPicCenter = tmpDisWithPicCenter;
+				baseCoordinateUseIdx = i;
+			}
+		}
 	}
 
-	center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
-	center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
-	(*pixelsize) = (int)(Psize/SuccessUnitNum/0.001*PicScale+0.5);
+	success = GetXyCoordinate(baseCoordinate[baseCoordinateUseIdx].pt1, baseCoordinate[baseCoordinateUseIdx].pt2, PointCenter, N, distance, baseCoordinate[baseCoordinateUseIdx].direction, PicCenter, &tempX, &tempY, &tempPsize);
+	if(success)
+	{
+		center->x = (DWORD)(tempX/0.01+0.5);
+		center->y = (DWORD)(tempY/0.01+0.5);
+		(*pixelsize) = (int)(tempPsize/0.001*PicScale+0.5);
+		//printf("x:%f，y:%f，PixelSize:%f\n", tempX, tempY, tempPsize);
+	}
+	else
+	{
+		for(i = 0; i < BaseCoordinateNum; i++)
+		{	
+			//if(i==baseCoordinateUseIdx)
+			//{
+			//	printf("**");
+			//}
+			success = GetXyCoordinate(baseCoordinate[i].pt1, baseCoordinate[i].pt2, PointCenter, N, distance, baseCoordinate[i].direction, PicCenter, &tempX, &tempY, &tempPsize);
+
+			if(success)
+			{
+				//求平均提高精度
+				CenterX += tempX;
+				CenterY += tempY;
+				Psize += tempPsize;
+				SuccessUnitNum++;
+
+				//printf("x:%f，y:%f，PixelSize:%f\n", tempX, tempY, tempPsize);
+				////测试时如果精度够，可以提早跳出以提高检测速度
+				//if(SuccessUnitNum==5)
+				//	break;
+			}		
+		}
+		t_end=clock();
+		//printf("GetXyCoordinate:%d\n",t_end-t_start);
+
+		if(SuccessUnitNum==0)//没有检测出一个可用的单元
+		{
+			free(PointCenter);
+			free(baseCoordinate);
+			free(pDataGaussian);
+			free(resizebuf);
+			free(typeImg);
+			return 0;
+		}
+
+		center->x = (DWORD)(CenterX/SuccessUnitNum/0.01+0.5);
+		center->y = (DWORD)(CenterY/SuccessUnitNum/0.01+0.5);
+		(*pixelsize) = (int)(Psize/SuccessUnitNum/0.001*PicScale+0.5);
+	}
 
 
 	free(PointCenter);
